@@ -1,6 +1,6 @@
 //Maya ASCII 2025ff03 scene
 //Name: MiniFigure_Final.ma
-//Last modified: Fri, Mar 07, 2025 08:44:01 PM
+//Last modified: Fri, Mar 07, 2025 08:55:43 PM
 //Codeset: 1252
 requires maya "2025ff03";
 requires "stereoCamera" "10.0";
@@ -14,7 +14,7 @@ fileInfo "product" "Maya 2025";
 fileInfo "version" "2025";
 fileInfo "cutIdentifier" "202409190603-cbdc5a7e54";
 fileInfo "osv" "Windows 11 Home v2009 (Build: 22631)";
-fileInfo "UUID" "7F111514-4DA4-96B6-3AE3-B38981BAC929";
+fileInfo "UUID" "1AEB408C-45FA-7CC7-64E5-238C35F102F2";
 createNode transform -n "LegoZombieFigure_Geo";
 	rename -uid "ECD890D5-47E0-46EF-15B5-37B61C5A4AA4";
 	setAttr ".t" -type "double3" -3 0 0 ;
@@ -30150,13 +30150,13 @@ createNode mesh -n "HeadBrick1Shape" -p "HeadBrick1";
 createNode transform -s -n "persp";
 	rename -uid "4416AB45-4C92-67E1-FE47-3DBD1D410582";
 	setAttr ".v" no;
-	setAttr ".t" -type "double3" 4.815636602899791 7.6070265577308396 23.808829489903218 ;
-	setAttr ".r" -type "double3" -11.138352729872492 724.99999999994805 0 ;
+	setAttr ".t" -type "double3" 10.339727279069299 7.1669376556849711 16.36553417857586 ;
+	setAttr ".r" -type "double3" -10.538352729880062 743.39999999992938 -4.331978549129389e-16 ;
 createNode camera -s -n "perspShape" -p "persp";
 	rename -uid "F5AEC17F-43F5-3ED8-7F05-FE832D6BBF01";
 	setAttr -k off ".v" no;
 	setAttr ".fl" 34.999999999999993;
-	setAttr ".coi" 23.428116830213551;
+	setAttr ".coi" 18.959339568818464;
 	setAttr ".imn" -type "string" "persp";
 	setAttr ".den" -type "string" "persp_depth";
 	setAttr ".man" -type "string" "persp_mask";
