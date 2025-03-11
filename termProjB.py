@@ -6,7 +6,7 @@ MyWin = 'Lego Blocks'
 if cmds.window(MyWin, exists=True):
     cmds.deleteUI(MyWin, window=True)
     
-MyWin = cmds.window(MyWin, menuBar=True, widthHeight=(500,800))
+MyWin = cmds.window(MyWin, menuBar=True, widthHeight=(500, 800))
 
 cmds.menu(label="Basic Options")
 cmds.menuItem(label="New Scene", command=('cmds.file(new=True, force=True)'))
@@ -28,6 +28,10 @@ cmds.colorSliderGrp('blockColour', label="Colour", hsv=(120, 1, 1))
 #Modifer Settings (Adding a side stud and making a hole in the size)
 cmds.checkBox ('addSideStud', l='Add Hollow Side Stud', v=0)
 cmds.checkBox ('makeSideHole', l='Make Side Hole', v=0)
+cmds.checkBox ('makeMultSideHoles', l='Make Multiple Side Holes', v=0)
+cmds.checkBox ('makeArch', l='Make Arch', v=0)
+cmds.checkBox ('makeTopStudsHollow', l='Make Top Studs Hollow', v=0)
+cmds.checkBox ('makeAxleHole', l='Make Axle Hole', v=0)
 
 cmds.columnLayout()
 
@@ -88,10 +92,31 @@ cmds.intSliderGrp('roundStudHeight',l="Height", f=True, min=1, max=20, value=1)
 
 #Colour Settings
 cmds.colorSliderGrp('roundStudColour', label="Colour", hsv=(120, 1, 1))
+
+#modifier settings
+cmds.checkBox('plainCylinder', l='Plain Cylinder', v=0)
 cmds.columnLayout()
 
 #create brick
 cmds.button(label="Create Round Stud", command=('roundStud()'))
+cmds.setParent( '..' )
+
+cmds.setParent( '..' )
+
+#create axle
+cmds.frameLayout(collapsable=True, label="Axle", width=475, height=140)
+
+cmds.columnLayout()
+
+#Size Settings
+cmds.intSliderGrp('axleLength',l="Length", f=True, min=1, max=5, value=4)
+
+#Colour Settings
+cmds.colorSliderGrp('axleColour', label="Colour", hsv=(120, 1, 1))
+cmds.columnLayout()
+
+#create brick
+cmds.button(label="Create Axle", command=('axle()'))
 cmds.setParent( '..' )
 
 cmds.setParent( '..' )
@@ -108,6 +133,7 @@ cmds.setParent( '..' )
 
 cmds.showWindow( MyWin )
 
+
 #Function for creating the basic brick
 def basicBlock():
     
@@ -123,6 +149,10 @@ def basicBlock():
     addSideStud = cmds.checkBox('addSideStud', query=True, v=True)
     makeClear = cmds.checkBox('makeClear', query=True, v=True)
     makeSideHole = cmds.checkBox('makeSideHole', query=True, v=True)
+    makeMultSideHoles = cmds.checkBox('makeMultSideHoles', query=True, v=True)
+    makeArch = cmds.checkBox('makeArch', query=True, v=True)
+    makeTopStudsHollow = cmds.checkBox('makeTopStudsHollow', query=True, v=True)
+    makeAxleHole = cmds.checkBox('makeAxleHole', query=True, v=True)
     
     #Give the brick a name and random number
     nsTmp = "Block" + str(rnd.randint(1000,9999))
@@ -140,20 +170,32 @@ def basicBlock():
     cmds.move((cubeSizeY/2.0), moveY=True)
     
     #Add the brick studs
+    count = 1
     for i in range(blockWidth):
         for j in range(blockDepth):
             cmds.polyCylinder(r=0.25, h=0.20)
             cmds.move((cubeSizeY + 0.10), moveY=True, a=True)
             cmds.move(((i * 0.8) - (cubeSizeX/2.0) + 0.4), moveX=True, a=True)
             cmds.move(((j * 0.8) - (cubeSizeZ/2.0) + 0.4), moveZ=True, a=True)
+            
+            # hollow out studs
+            if makeTopStudsHollow is True:
+                #get the top face of the stud
+                stud = nsTmp + ":pCylinder" + str(count) + ".f[21]"
+                count = count+1
+                
+                #extrude the face
+                cmds.polyExtrudeFacet(stud, scale=(0.8, 0.8, 0.8))
+                cmds.polyExtrudeFacet(stud, translateY=(-0.199))
     
-    #Merge the peices together
+    #Merge the pieces together
     cmds.polyUnite((nsTmp+":*"), n=nsTmp, ch=False)
+    
     #Delete the shape history
     cmds.delete(ch=True)
     
-    #If the make side hole modifer is checker, the height is greater than 2 and the add size stud is false
-    if makeSideHole is True and addSideStud is False and blockHeight > 2:
+    #If the make side hole modifer is checked, the height is greater than 2, and the mutually exclusive mods are false
+    if makeSideHole is True and addSideStud is False and makeMultSideHoles is False and makeArch is False and makeAxleHole is False and blockHeight > 2:
         
         #Create a Cylinder that will push through the piece and place it correctly
         cmds.polyCylinder(r=0.25, h=cubeSizeX+0.20)
@@ -171,15 +213,60 @@ def basicBlock():
         
         #turn the three cylinders into on shape
         cmds.polyCBoolOp(nsTmp + ":pCylinder1", nsTmp + ":pCylinder2", nsTmp + ":pCylinder3", operation=1)
+        
         #Delete the shape history
         cmds.delete(ch=True)
+        
         #boolean remove the combined cylinders from the piece
         cmds.polyCBoolOp(nsTmp + ":" + nsTmp, nsTmp + ':polySurface1', operation=2)
+        
         #Delete the shape history
         cmds.delete(ch=True)
     
+    #If the make multiple side hole modifier is checked, the height is > 2, and the mutually exclusive mods are false
+    if makeMultSideHoles is True and makeSideHole is False and makeArch is False and addSideStud is False and makeAxleHole is False and blockHeight > 2:
+        
+        #Create 2 cyliners that will push thru the piece and place them correctly
+        cmds.polyCylinder(r=0.25, h=cubeSizeX+0.20)
+        cmds.rotate(0, 0 , -90)
+        cmds.move((cubeSizeY - 0.375), (cubeSizeZ/4), moveY=True, moveZ=True, a=True)
+        
+        cmds.polyCylinder(r=0.25, h=cubeSizeX+0.20)
+        cmds.rotate(0, 0 , -90)
+        cmds.move((cubeSizeY - 0.375), -(cubeSizeZ/4), moveY=True, moveZ=True, a=True)
+        
+        #four more cylinders for the indented ends, place them correctly
+        cmds.polyCylinder(r=0.3, h=0.20)
+        cmds.rotate(0, 0 , -90)
+        cmds.move((cubeSizeX/2 + 0.01),(cubeSizeY - 0.375), (cubeSizeZ/4), moveX=True,  moveY=True, moveZ=True, a=True)
+        
+        cmds.polyCylinder(r=0.3, h=0.20)
+        cmds.rotate(0, 0 , -90)
+        cmds.move((-cubeSizeX/2 - 0.01),(cubeSizeY - 0.375), (cubeSizeZ/4), moveX=True,  moveY=True, moveZ=True, a=True)
+        
+        cmds.polyCylinder(r=0.3, h=0.20)
+        cmds.rotate(0, 0 , -90)
+        cmds.move((cubeSizeX/2 + 0.01),(cubeSizeY - 0.375), -(cubeSizeZ/4), moveX=True,  moveY=True, moveZ=True, a=True)
+        
+        cmds.polyCylinder(r=0.3, h=0.20)
+        cmds.rotate(0, 0 , -90)
+        cmds.move((-cubeSizeX/2 - 0.01),(cubeSizeY - 0.375), -(cubeSizeZ/4), moveX=True,  moveY=True, moveZ=True, a=True)
+        
+        #turn all cylinders into one shape
+        cmds.polyCBoolOp(nsTmp + ":pCylinder1", nsTmp + ":pCylinder2", nsTmp + ":pCylinder3", nsTmp + ":pCylinder4", nsTmp + ":pCylinder5", nsTmp + ":pCylinder6", operation=1)
+        
+        #delete shape history
+        cmds.delete(ch=True)
+        
+        #boolean remove the combined cylinders from the piece
+        cmds.polyCBoolOp(nsTmp + ":" + nsTmp, nsTmp + ':polySurface1', operation=2)
+        
+        #delete shape history
+        cmds.delete(ch=True)
+    
     #If the add side stud modifer is checker, the height is greater than 2 and the make hole is false
-    if addSideStud is True and makeSideHole is False and blockHeight > 2:
+    if addSideStud is True and makeSideHole is False and makeMultSideHoles is False and makeArch is False and makeAxleHole is False and blockHeight > 2:
+        
         #Create a Cylinder that will become the stud and place it correctly
         cmds.polyCylinder(r=0.25, h=0.20)
         cmds.rotate(0, 0 , -90)
@@ -197,26 +284,77 @@ def basicBlock():
         
         #combine the shapes
         cmds.polyUnite((nsTmp+":*"), n=nsTmp, ch=False)
+        
         #Delete the shape history
+        cmds.delete(ch=True)
+    
+    #If makeArch modifier is checked, the height is > 2, and the mutually exclusive mods are false
+    if makeArch is True and addSideStud is False and makeSideHole is False and makeMultSideHoles is False and makeAxleHole is False and blockHeight > 2:
+        
+        #create a cylinder to push thru the piece
+        cmds.polyCylinder(r=0.5, h=cubeSizeX+0.20)
+        cmds.rotate(0, 0 , -90)
+        cmds.move((cubeSizeY - 0.75), moveY=True, a=True)
+        
+        #create a cube to push thru the piece
+        cmds.polyCube(w=cubeSizeX+0.2, h=0.5, d=1)
+        cmds.move((cubeSizeY - 1), moveY=True, a=True)
+        
+        #combine cylinder and cube
+        cmds.polyCBoolOp(nsTmp + ":pCylinder1", nsTmp + ":pCube1", operation=1)
+        
+        #delete shape history
+        cmds.delete(ch=True)
+        
+        #boolean remove arch from the piece
+        cmds.polyCBoolOp(nsTmp + ":" + nsTmp, nsTmp + ':polySurface1', operation=2)
+        
+        #delete shape history
+        cmds.delete(ch=True)
+    
+    #if makeAxleHole is checked, the height is > 2, and the mutually exclusive mods are false
+    if makeAxleHole is True and addSideStud is False and makeSideHole is False and makeMultSideHoles is False and makeArch is False and blockHeight > 2:
+        
+        #create an axle to push thru the piece
+        cmds.polyCube(w=cubeSizeX+0.2, h=0.4, d=0.15)
+        cmds.polyCube(w=cubeSizeX+0.2, h=0.4, d=0.15)
+        cmds.rotate(90, 0, 0)
+        
+        #combine cubes
+        cmds.polyCBoolOp(nsTmp + ":pCube1", nsTmp + ":pCube2", operation=1)
+        
+        #delete shape history
+        cmds.delete(ch=True)
+        
+        #move axle into position
+        cmds.move((cubeSizeY - 0.375), moveY=True, a=True)
+        
+        #remove axle from the block
+        cmds.polyCBoolOp(nsTmp + ":" + nsTmp, nsTmp + ':polySurface1', operation=2)
+        
+        #delete shape history
         cmds.delete(ch=True)
     
     #rename the shape
     cmds.rename(nsTmp+":"+nsTmp, ignoreShape=True)
+    
     #make the material
     myShader = cmds.shadingNode('lambert', asShader=True, name="blckMat")
+    
     #if the clear modifer is checked
     if makeClear is True:
         #make the shape transparent
         cmds.setAttr(nsTmp+":blckMat.transparency",0.9,0.9,0.9, typ='double3')
+        
     #select the whole shape and assign the new material
     cmds.select(nsTmp+":"+nsTmp)
     cmds.setAttr(nsTmp+":blckMat.color",rgb[0],rgb[1],rgb[2], typ='double3')
     cmds.hyperShade(assign=(nsTmp+":blckMat"))
+    
     #rename the shape
     cmds.namespace(removeNamespace=":"+nsTmp,mergeNamespaceWithParent=True)
-    
-    
-    
+
+
 #Function for creating the tile brick
 def tileBlock():
     #Gathering size settings
@@ -256,14 +394,17 @@ def tileBlock():
         if makeClear is True:
             #make the shape transparent
             cmds.setAttr(nsTmp+":blckMat.transparency",0.9,0.9,0.9, typ='double3')
+            
         #make the material
         cmds.select(myShape)
         cmds.setAttr(nsTmp+":blckMat.color",rgb[0],rgb[1],rgb[2], typ='double3')
         
         #Delete the shape history
         cmds.delete(ch=True)
+        
         #Add the colour to the material
         cmds.hyperShade(assign=(nsTmp+":blckMat"))
+        
         #rename the shape
         cmds.rename(nsTmp, ignoreShape=True)
         cmds.namespace(removeNamespace=":"+nsTmp, mergeNamespaceWithParent=True)
@@ -284,20 +425,26 @@ def tileBlock():
                 
         #make the new material        
         myShader = cmds.shadingNode('lambert', asShader=True, name="blckMat")
+        
         #if the clear modifer is checked
         if makeClear is True:
             #make the shape transparent
             cmds.setAttr(nsTmp+":blckMat.transparency",0.9,0.9,0.9, typ='double3')
+            
         #Add the colour to the material
         cmds.setAttr(nsTmp+":blckMat.color",rgb[0],rgb[1],rgb[2], typ='double3')
+        
         #Combine the shapes and delete the shape history    
         cmds.polyUnite((nsTmp+":*"), n=nsTmp, ch=False)
         cmds.delete(ch=True)
+        
         #assign the material    
         cmds.hyperShade(assign=(nsTmp+":blckMat"))
+        
         #rename the shape
         cmds.namespace(removeNamespace=":"+nsTmp,mergeNamespaceWithParent=True)
-        
+
+
 #Function for creating the round 1x1 stud    
 def roundStud():
     #force the brick size to be 1x1
@@ -312,6 +459,7 @@ def roundStud():
     
     #Gathering modifer settings
     makeClear = cmds.checkBox('makeClear', query=True, v=True)
+    plainCylinder = cmds.checkBox('plainCylinder', q=True, v=True)
     
     #Give the brick a name and random number
     nsTmp = "roundStud" + str(rnd.randint(1000,9999))
@@ -324,20 +472,32 @@ def roundStud():
     cubeSizeZ = blockDepth * 0.8
     cubeSizeY = blockHeight * 0.32
     
-    #create the top stud
-    cmds.polyCylinder(r=0.25, h=0.20)
-    cmds.move((cubeSizeY + 0.10), moveY=True, a=True)
+    #change generation depending on plainCylinder
+    if plainCylinder is False:
+        #create the top stud
+        cmds.polyCylinder(r=0.25, h=0.20)
+        cmds.move((cubeSizeY + 0.10), moveY=True, a=True)
+        
+        #create the stud middle
+        cmds.polyCylinder(r=0.375, h=0.10)
+        cmds.move((cubeSizeY - 0.05), moveY=True)
+        
+        #create the stud base
+        cmds.polyCylinder(r=0.30, h=0.3)
+        cmds.move((cubeSizeY/2.0 - 0.02), moveY=True, a=True)
+        
+        #combine the shapes
+        cmds.polyUnite((nsTmp+":*"), n=nsTmp, ch=False)
     
-    #create the stud middle
-    cmds.polyCylinder(r=0.375, h=0.10)
-    cmds.move((cubeSizeY - 0.05), moveY=True)
+    else:
+        #create just the one cylinder
+        cmds.polyCylinder(r=cubeSizeX/2, h=cubeSizeY)
+        cmds.move((cubeSizeY/2), moveY=True, a=True)
+        
+        #rename the shape
+        cmds.rename(nsTmp, ignoreShape=True)
     
-    #create the stud base
-    cmds.polyCylinder(r=0.30, h=0.3)
-    cmds.move((cubeSizeY/2.0 - 0.02), moveY=True, a=True)
-    
-    #combine the shapes and delete the shape history
-    cmds.polyUnite((nsTmp+":*"), n=nsTmp, ch=False)
+    #delete shape history
     cmds.delete(ch=True)
     
     #create a new material
@@ -347,16 +507,20 @@ def roundStud():
     if makeClear is True:
         #make the shape transparent
         cmds.setAttr(nsTmp+":blckMat.transparency",0.9,0.9,0.9, typ='double3')
+        
     #select the shape
     cmds.select(nsTmp + ':' + nsTmp)
     
     #colour the material and assign it to the shape
     cmds.setAttr(nsTmp+":blckMat.color",rgb[0],rgb[1],rgb[2], typ='double3')
     cmds.hyperShade(assign=(nsTmp+":blckMat"))
+    
     #rename the shape
     cmds.rename(nsTmp, ignoreShape=True)
     cmds.namespace(removeNamespace=":"+nsTmp, mergeNamespaceWithParent=True)
-    
+
+
+#function for creating the corner block
 def cornerBlock():
     #force the brick size to be 2x2
     blockWidth = 2
@@ -427,4 +591,49 @@ def cornerBlock():
     #rename the piece
     cmds.rename(nsTmp, ignoreShape=True)
     cmds.namespace(removeNamespace=":"+nsTmp, mergeNamespaceWithParent=True)
+
+
+#function for creating the axle piece
+def axle():
+    #get length
+    axleLength = cmds.intSliderGrp('axleLength', q=True, v=True)
     
+    #Gathering colour settings
+    rgb = cmds.colorSliderGrp('axleColour', q=True, rgbValue=True)
+    
+    #Give the brick a name and random number
+    nsTmp = "Axle" + str(rnd.randint(1000,9999))
+    cmds.select(clear=True)
+    cmds.namespace(add=nsTmp)
+    cmds.namespace(set=nsTmp)
+    
+    #change axle length depending on settings
+    cubeLength = axleLength * 0.8
+    
+    #create the cubes and place them correctly
+    cmds.polyCube(w=cubeLength, h=0.4, d=0.15)
+    cmds.move(0.2, moveY=True)
+    
+    cmds.polyCube(w=cubeLength, h=0.4, d=0.15)
+    cmds.rotate(90, 0, 0)
+    cmds.move(0.2, moveY=True)
+    
+    #combine cubes
+    cmds.polyCBoolOp(nsTmp + ":pCube1", nsTmp + ":pCube2", operation=1)
+    
+    #delete shape history
+    cmds.delete(ch=True)
+    
+    #make a new material
+    myShader = cmds.shadingNode('lambert', asShader=True, name="blckMat")
+    
+    #select the shape
+    cmds.select(nsTmp + ':polySurface1')
+    
+    #assign the material
+    cmds.setAttr(nsTmp+":blckMat.color",rgb[0],rgb[1],rgb[2], typ='double3')
+    cmds.hyperShade(assign=(nsTmp+":blckMat"))
+    
+    #rename the piece
+    cmds.rename(nsTmp, ignoreShape=True)
+    cmds.namespace(removeNamespace=":"+nsTmp, mergeNamespaceWithParent=True)
